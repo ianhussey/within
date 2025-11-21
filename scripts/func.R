@@ -79,22 +79,38 @@ check_values <- function(n, m1, sd1, m2, sd2) {
     dplyr::bind_cols(purrr::pmap_df(., within_t))
 }
 
-## r_plot ----
+## p_plot ----
 
-r_plot <- function(r_table, reported_p = NULL) {
-  p <- ggplot(r_table, aes(x = r, y = p, color = alternative))
+p_plot <- function(r_table, reported_p = NULL) {
+  p <- ggplot(r_table, aes(y = r, x = p, color = alternative))
   if (!is.na(reported_p)) {
-    p <- p + geom_hline(yintercept = reported_p, alpha = 0.5)
+    p <- p + 
+      geom_vline(xintercept = reported_p, alpha = 0.5) +
+      #scale_x_continuous(breaks = c(0, .25, .5, .75, 1)) +
+      #scale_y_continuous(breaks = c(-1, -.75, -.5, -.25, 0, .25, .5, .75, 1)) +
+      theme_linedraw()
+      
   }
-  p + geom_line(size = 1, alpha = 0.8)
+  p + geom_line(size = 1, alpha = 0.8) +
+    geom_vline(xintercept = 0.05, linetype = "dotted") +
+    scale_x_continuous(breaks = c(0, .25, .5, .75, 1)) +
+    scale_y_continuous(breaks = c(-1, -.75, -.5, -.25, 0, .25, .5, .75, 1)) +
+    theme_linedraw()
 }
 
 ## t_plot ----
 
 t_plot <- function(r_table, reported_t = NULL) {
-  t <- ggplot(r_table, aes(x = r, y = t))
+  t <- ggplot(r_table, aes(y = r, x = t))
   if (!is.na(reported_t)) {
-    t <- t + geom_hline(yintercept = reported_t, alpha = 0.5)
+    t <- t + 
+      geom_vline(xintercept = reported_t, alpha = 0.5) +
+      #scale_x_continuous(breaks = scales::breaks_pretty(n = 5)) +
+      #scale_y_continuous(breaks = c(-1, -.75, -.5, -.25, 0, .25, .5, .75, 1)) +
+      theme_linedraw()
   }
-  t + geom_line(size = 1, color = "purple", alpha = 0.8)
+  t + geom_line(size = 1, color = "purple", alpha = 0.8) +
+    scale_x_continuous(breaks = scales::breaks_pretty(n = 5)) +
+    scale_y_continuous(breaks = c(-1, -.75, -.5, -.25, 0, .25, .5, .75, 1)) +
+    theme_linedraw()
 }

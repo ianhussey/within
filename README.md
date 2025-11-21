@@ -3,3 +3,10 @@
 Check the possible p-values and t-values for the given N, means and SDs for correlations between -1 and +1.
 
 Given a t-value or p-value, get the possible correlations for one- and two-tailed tests.
+
+
+
+Fork of https://github.com/lisadebruine/within
+
+- Swaps X and Y axes on plots
+- relabels "r-plot" to p-plot
