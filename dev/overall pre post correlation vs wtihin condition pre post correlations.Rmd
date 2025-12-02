@@ -1,0 +1,288 @@
+---
+title: "Pre post correlations"
+author: "Ian Hussey"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    code_folding: hide
+    highlight: haddock
+    theme: flatly
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(message = FALSE, 
+                      warning = FALSE)
+
+```
+
+# convert within condition pre post correlations to overall pre post correlation
+
+"I have summary stats (M, SD, N, correlation between pre and post within each condition) for an RCT with intervention and control conditions. Write an R tidyverse function to calculate the pre post correlation for the whole sample. I understand that this is more complicated than simply the weighted average of the two correlations."
+
+chatgpt function
+
+```{r}
+
+library(dplyr)
+
+compute_total_prepost_correlation <- function(data) {
+  # Compute total sample size
+  N_total <- sum(data$N)
+  
+  # Compute overall means
+  M_pre_total <- sum(data$N * data$M_pre) / N_total
+  M_post_total <- sum(data$N * data$M_post) / N_total
+  
+  # Compute variances and covariances for each group
+  data <- data %>%
+    mutate(
+      var_pre = SD_pre^2,
+      var_post = SD_post^2,
+      cov_prepost = r_prepost * SD_pre * SD_post,
+      SSX = (N - 1) * var_pre + N * (M_pre - M_pre_total)^2,
+      SSY = (N - 1) * var_post + N * (M_post - M_post_total)^2,
+      SP = (N - 1) * cov_prepost + N * (M_pre - M_pre_total) * (M_post - M_post_total)
+    )
+  
+  # Sum up SSX, SSY, SP
+  SSX_total <- sum(data$SSX)
+  SSY_total <- sum(data$SSY)
+  SP_total <- sum(data$SP)
+  
+  # Compute total variances and covariance
+  var_pre_total <- SSX_total / (N_total - 1)
+  var_post_total <- SSY_total / (N_total - 1)
+  cov_prepost_total <- SP_total / (N_total - 1)
+  
+  # Compute total correlation
+  r_total <- cov_prepost_total / sqrt(var_pre_total * var_post_total)
+  
+  return(r_total)
+}
+
+# Sample data
+data <- tibble(
+  group = c("control", "intervention"),
+  N = c(50, 50),
+  M_pre = c(10, 11),
+  SD_pre = c(2, 2.1),
+  M_post = c(12, 13),
+  SD_post = c(2.5, 2.6),
+  r_prepost = c(0.6, 0.65)
+)
+
+# Compute total pre-post correlation
+compute_total_prepost_correlation(data)
+
+```
+
+
+# overall pre post correlation from M, SD, N and test retest reliability
+
+"Ok. Now imagine I don't have the pre post correlations as they are often not reported. However, i do have the measures test-retest reliability, which can be assumed to be equivalent to the pre post correlation in the control condition when it is a negative control (eg waiting list). We can also assume that the correlation is different in the intervention condition as a function of treatment heterogeneity. Treatment heterogeneity can be estimated by the variance ratio between the control vs intervention conditions - although im not sure if this should be calculated just using the post SDs or perhaps including the pre SDs in some way too. This heterogeneity could be used as a multiplier to attenuate the assumed pre post correlation in the treatment condition. Does this make sense mathematically? If so, alter the function to estimate the overall pre post correlation using just the M, SD, N and test retest reliability."
+
+```{r}
+
+library(dplyr)
+
+compute_total_prepost_correlation2 <- function(data, test_retest_reliability) {
+  # Extract SD_post in control group
+  SD_post_c <- data %>% filter(group == "control") %>% pull(SD_post)
+  
+  data <- data %>%
+    mutate(
+      # Estimate pre-post correlation
+      r_prepost = case_when(
+        group == "control" ~ test_retest_reliability,
+        # intervention pre post correlation estimated from the T-RT reliability and the variance ratio (treatment heterogeneity)
+        group == "intervention" ~ test_retest_reliability * (SD_post_c / SD_post) 
+      )
+    )
+  
+  # Compute total sample size
+  N_total <- sum(data$N)
+  
+  # Compute overall means
+  M_pre_total <- sum(data$N * data$M_pre) / N_total
+  M_post_total <- sum(data$N * data$M_post) / N_total
+  
+  # Compute variances and covariances for each group
+  data <- data %>%
+    mutate(
+      var_pre = SD_pre^2,
+      var_post = SD_post^2,
+      cov_prepost = r_prepost * SD_pre * SD_post,
+      SSX = (N - 1) * var_pre + N * (M_pre - M_pre_total)^2, # Sum of Squares for pre
+      SSY = (N - 1) * var_post + N * (M_post - M_post_total)^2, # Sum of Squares for post
+      SP = (N - 1) * cov_prepost + N * (M_pre - M_pre_total) * (M_post - M_post_total) # Sum of Cross-Products
+    )
+  
+  # Sum up SSX, SSY, SP
+  SSX_total <- sum(data$SSX)
+  SSY_total <- sum(data$SSY)
+  SP_total <- sum(data$SP)
+  
+  # Compute total variances and covariance
+  var_pre_total <- SSX_total / (N_total - 1)
+  var_post_total <- SSY_total / (N_total - 1)
+  cov_prepost_total <- SP_total / (N_total - 1)
+  
+  # Compute total correlation
+  r_total <- cov_prepost_total / sqrt(var_pre_total * var_post_total)
+  
+  return(r_total)
+}
+
+
+# Sample data
+data <- tibble(
+  group = c("control", "intervention"),
+  N = c(50, 50),
+  M_pre = c(10, 11),
+  SD_pre = c(2, 2.1),
+  M_post = c(12, 13),
+  SD_post = c(2.5, 2.6)
+)
+
+# Test-retest reliability
+test_retest_reliability <- 0.6
+
+# Compute total pre-post correlation
+compute_total_prepost_correlation2(data, test_retest_reliability)
+
+```
+
+# Simulation
+
+Demonstrate that simply averaging the two correlations is not equivalent to the more complex and correct combination of them
+
+```{r fig.height=7, fig.width=7}
+
+library(dplyr)
+library(purrr)
+library(ggplot2)
+
+set.seed(123) # For reproducibility
+
+# Correct method function
+compute_total_prepost_correlation <- function(data) {
+  N_total <- sum(data$N)
+  M_pre_total <- sum(data$N * data$M_pre) / N_total
+  M_post_total <- sum(data$N * data$M_post) / N_total
+  
+  data <- data %>%
+    mutate(
+      var_pre = SD_pre^2,
+      var_post = SD_post^2,
+      cov_prepost = r_prepost * SD_pre * SD_post,
+      SSX = (N - 1) * var_pre + N * (M_pre - M_pre_total)^2,
+      SSY = (N - 1) * var_post + N * (M_post - M_post_total)^2,
+      SP = (N - 1) * cov_prepost + N * (M_pre - M_pre_total) * (M_post - M_post_total)
+    )
+  
+  SSX_total <- sum(data$SSX)
+  SSY_total <- sum(data$SSY)
+  SP_total <- sum(data$SP)
+  
+  var_pre_total <- SSX_total / (N_total - 1)
+  var_post_total <- SSY_total / (N_total - 1)
+  cov_prepost_total <- SP_total / (N_total - 1)
+  
+  r_total <- cov_prepost_total / sqrt(var_pre_total * var_post_total)
+  
+  return(r_total)
+}
+
+# Weighted average method function
+compute_weighted_average_correlation <- function(data) {
+  N_total <- sum(data$N)
+  weighted_r <- sum(data$N * data$r_prepost) / N_total
+  return(weighted_r)
+}
+
+# Number of simulations
+num_simulations <- 10000
+
+# Function to perform a single simulation
+simulate_correlation <- function(i) {
+  data <- tibble(
+    group = c("control", "intervention"),
+    N = sample(30:200, 2, replace = TRUE),
+    M_pre = runif(2, 10, 100),
+    SD_pre = runif(2, 5, 20),
+    M_post = runif(2, 10, 100),
+    SD_post = runif(2, 5, 20),
+    r_prepost = runif(2, 0.3, 0.9)
+  )
+  
+  r_correct <- compute_total_prepost_correlation(data)
+  r_weighted <- compute_weighted_average_correlation(data)
+  
+  abs_diff <- abs(r_correct - r_weighted)
+  rel_diff <- ifelse(r_correct != 0, abs_diff / abs(r_correct), NA)
+  
+  return(tibble(r_correct = r_correct,
+                r_weighted = r_weighted,
+                abs_diff = abs_diff, 
+                rel_diff = rel_diff))
+}
+
+# Run the simulations
+results <- map_dfr(1:num_simulations, simulate_correlation)
+
+# Statistical summaries
+mean_abs_diff <- mean(results$abs_diff, na.rm = TRUE)
+median_abs_diff <- median(results$abs_diff, na.rm = TRUE)
+max_abs_diff <- max(results$abs_diff, na.rm = TRUE)
+
+mean_rel_diff <- mean(results$rel_diff, na.rm = TRUE)
+median_rel_diff <- median(results$rel_diff, na.rm = TRUE)
+max_rel_diff <- max(results$rel_diff, na.rm = TRUE)
+
+# Print summaries
+cat("Statistical Summary of Absolute Differences:\n")
+cat(sprintf("Mean Absolute Difference: %.4f\n", mean_abs_diff))
+cat(sprintf("Median Absolute Difference: %.4f\n", median_abs_diff))
+cat(sprintf("Max Absolute Difference: %.4f\n", max_abs_diff))
+
+cat("\nStatistical Summary of Relative Differences:\n")
+cat(sprintf("Mean Relative Difference: %.2f%%\n", mean_rel_diff * 100))
+cat(sprintf("Median Relative Difference: %.2f%%\n", median_rel_diff * 100))
+cat(sprintf("Max Relative Difference: %.2f%%\n", max_rel_diff * 100))
+
+# Plot histograms
+# Absolute differences
+ggplot(results, aes(x = abs_diff)) +
+  geom_histogram(binwidth = 0.005, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Absolute Differences",
+       x = "Absolute Difference",
+       y = "Frequency") +
+  theme_minimal()
+
+# Relative differences
+ggplot(results, aes(x = rel_diff)) +
+  geom_histogram(fill = "salmon", color = "black") +
+  labs(title = "Distribution of Relative Differences",
+       x = "Relative Difference",
+       y = "Frequency") +
+  theme_minimal()
+
+ggplot(results, aes(x = r_correct, y = r_weighted)) +
+  geom_point(alpha = 0.5) +
+  theme_minimal()
+
+```
+
+
+# Simulate relationship between between-conditions effect size, overall pre post correlation, test-retest reliability, and treatment heterogeneity.
+
+I want to know the relationship between TRT reliability and overall pre post correlation, because TRT is more readily available for scales than pre post correlation within RCTs, and could be used to inform the within tool.
+
+before even stimulating it, demonstrate the differences here with a plot of TRT for each condition vs overall, maybe using data points whose M and SD match the desired ones.
+
+
+
+
