@@ -72,7 +72,7 @@ ui <- dashboardPage(
                numericInput("reported_t", "t-value", NULL, step = .01),
                numericInput("reported_p", "p-value", NULL, min = 0, max = 1, step = .01)
            ),
-           tags$a(href="https://github.com/ianhussey/within", "Code & Citation")
+           tags$a(href="https://github.com/ianhussey/within", "Original code by Lisa DeBruine, modifications by Ian Hussey. Code & Citation.")
     ),
     column(width = 8,
            box(title = "t-values", width = 6, solidHeader = TRUE,
