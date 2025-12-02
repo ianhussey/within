@@ -82,13 +82,27 @@ check_values <- function(n, m1, sd1, m2, sd2) {
 ## p_plot ----
 
 p_plot <- function(r_table, reported_p = NULL) {
-  p <- ggplot(r_table, aes(y = r, x = p, color = alternative))
+  p <- ggplot(r_table, aes(y = r, x = p, color = alternative)) +
+    annotate(
+      "rect",
+      xmin = -Inf, xmax = Inf,      # span entire x-range
+      ymin = .25, ymax = .90,       # your chosen y-limits
+      alpha = 0.2                   # transparency
+      # , fill = "grey80"           # optionally set fill color
+    ) +
+    annotate(
+      "rect",
+      xmin = -Inf, xmax = Inf,      # span entire x-range
+      ymin = .5, ymax = .75,       # your chosen y-limits
+      alpha = 0.2                   # transparency
+      # , fill = "grey80"           # optionally set fill color
+    )
   if (!is.na(reported_p)) {
     p <- p + 
       geom_vline(xintercept = reported_p, alpha = 0.5) +
       #scale_x_continuous(breaks = c(0, .25, .5, .75, 1)) +
       #scale_y_continuous(breaks = c(-1, -.75, -.5, -.25, 0, .25, .5, .75, 1)) +
-      theme_linedraw()
+      theme_linedraw() 
       
   }
   p + geom_line(size = 1, alpha = 0.8) +
@@ -101,7 +115,21 @@ p_plot <- function(r_table, reported_p = NULL) {
 ## t_plot ----
 
 t_plot <- function(r_table, reported_t = NULL) {
-  t <- ggplot(r_table, aes(y = r, x = t))
+  t <- ggplot(r_table, aes(y = r, x = t)) +
+    annotate(
+      "rect",
+      xmin = -Inf, xmax = Inf,      # span entire x-range
+      ymin = .25, ymax = .90,       # your chosen y-limits
+      alpha = 0.2                   # transparency
+      # , fill = "grey80"           # optionally set fill color
+    ) +
+    annotate(
+      "rect",
+      xmin = -Inf, xmax = Inf,      # span entire x-range
+      ymin = .5, ymax = .75,       # your chosen y-limits
+      alpha = 0.2                   # transparency
+      # , fill = "grey80"           # optionally set fill color
+    )
   if (!is.na(reported_t)) {
     t <- t + 
       geom_vline(xintercept = reported_t, alpha = 0.5) +

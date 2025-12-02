@@ -4,6 +4,15 @@
 # flag input
 # add consistency checking among d_z, t, and p values
 # add notes that if p is approximated it will provide a limit on r but not a precise value.
+# what's happening when the table doesn't display with extreme values? is r outside [-1, 1]? then display a message that r is impossible, but i think its more complicated than this.
+
+# references for plausible r being probably [.5, .75] or more generously [.25, .90] but unlikely to be beyond this.
+# https://pmc.ncbi.nlm.nih.gov/articles/PMC6331475/
+# https://www.researchgate.net/publication/247720873_Estimating_Effect_Sizes_From_Pretest-Posttest-Control_Group_Designs
+# https://pmc.ncbi.nlm.nih.gov/articles/PMC6998624/
+# https://www.ncbi.nlm.nih.gov/books/NBK154408/
+# https://www.ncbi.nlm.nih.gov/books/NBK115798/
+# https://www.campbellcollaboration.org/calculator/equations
 
 
 # libraries ----
@@ -14,6 +23,7 @@ suppressPackageStartupMessages({
   library(shinyWidgets)
   library(ggplot2)
   library(dplyr)
+  library(tidyr)
   library(DT)
   library(faux)
   library(scales)
@@ -218,7 +228,11 @@ server <- function(input, output, session) {
   ## r_table ----
   output$r_table <- renderDT({
     message("r_table")
-    dplyr::bind_rows(p_table(), t_table())
+    dplyr::bind_rows(p_table(), t_table()) %>%
+      pivot_wider(names_from = "alternative",
+                  names_prefix = "p_",
+                  values_from = "p") %>%
+      select(r, diff_sd, t, d_z, d_av, p_greater, p_two.sided, p_less)
   }, options = list(dom = 't'))
 }
 
