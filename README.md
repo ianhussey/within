@@ -10,3 +10,8 @@ Fork of https://github.com/lisadebruine/within
 
 - Swaps X and Y axes on plots
 - relabels "r-plot" to p-plot
+
+
+
+- make r a possible input too instead of d_z or t. 
+- 
